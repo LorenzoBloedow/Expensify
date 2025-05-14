@@ -2,6 +2,7 @@ import type {ForwardedRef} from 'react';
 import React, {useEffect, useRef} from 'react';
 import type {StyleProp, ViewStyle} from 'react-native';
 import useThemeStyles from '@hooks/useThemeStyles';
+import changeKeyboardHeight from '@libs/actions/VirtualKeyboard';
 import * as Browser from '@libs/Browser';
 import DomUtils from '@libs/DomUtils';
 import Visibility from '@libs/Visibility';
@@ -41,6 +42,38 @@ function TextInput(props: BaseTextInputProps, ref: ForwardedRef<BaseTextInputRef
             removeVisibilityListener();
         };
         // eslint-disable-next-line react-compiler/react-compiler, react-hooks/exhaustive-deps
+    }, []);
+
+    // Handle Safari visual viewport bug, see https://github.com/Expensify/App/issues/57183
+    useEffect(() => {
+        if (!Browser.isMobileSafari()) {
+            return;
+        }
+
+        const prevViewportHeight = window.innerHeight;
+
+        if (!textInputRef.current || !prevViewportHeight) {
+            return;
+        }
+
+        // Input has focused, assume keyboard is opening
+        const focusHandler = () => {
+            // Wait for keyboard to open and fire a viewport resize event
+            const viewportHandler = () => {
+                const currentViewportHeight = window.visualViewport?.height;
+                if (!currentViewportHeight) {
+                    return;
+                }
+
+                changeKeyboardHeight(prevViewportHeight - currentViewportHeight);
+            };
+            visualViewport?.addEventListener('resize', viewportHandler, {once: true});
+        };
+        textInputRef.current.addEventListener('focusin', focusHandler);
+
+        return () => {
+            textInputRef.current?.removeEventListener('focusin', focusHandler);
+        };
     }, []);
 
     const isLabeledMultiline = !!props.label?.length && props.multiline;
