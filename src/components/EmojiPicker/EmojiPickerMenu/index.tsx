@@ -29,13 +29,14 @@ import useEmojiPickerMenu from './useEmojiPickerMenu';
 
 const throttleTime = Browser.isMobile() ? 200 : 50;
 
-function EmojiPickerMenu({onEmojiSelected, activeEmoji}: EmojiPickerMenuProps, ref: ForwardedRef<BaseTextInputRef>) {
+function EmojiPickerMenu({onEmojiSelected, onMenuInputFocusChange, activeEmoji}: EmojiPickerMenuProps, ref: ForwardedRef<BaseTextInputRef>) {
     const styles = useThemeStyles();
     const StyleUtils = useStyleUtils();
     const {windowWidth} = useWindowDimensions();
     const {shouldUseNarrowLayout} = useResponsiveLayout();
     const {translate} = useLocalize();
     const {singleExecution} = useSingleExecution();
+    const [isFocused, setIsFocused] = useState(false);
     const {
         allEmojis,
         headerEmojis,
@@ -50,7 +51,7 @@ function EmojiPickerMenu({onEmojiSelected, activeEmoji}: EmojiPickerMenuProps, r
         listStyle,
         emojiListRef,
         spacersIndexes,
-    } = useEmojiPickerMenu();
+    } = useEmojiPickerMenu(isFocused);
 
     // Ref for the emoji search input
     const searchInputRef = useRef<BaseTextInputRef>(null);
@@ -60,7 +61,6 @@ function EmojiPickerMenu({onEmojiSelected, activeEmoji}: EmojiPickerMenuProps, r
     const shouldFocusInputOnScreenFocus = canFocusInputOnScreenFocus();
 
     const [arePointerEventsDisabled, setArePointerEventsDisabled] = useState(false);
-    const [isFocused, setIsFocused] = useState(false);
     const [isUsingKeyboardMovement, setIsUsingKeyboardMovement] = useState(false);
     const [highlightEmoji, setHighlightEmoji] = useState(false);
     const [highlightFirstEmoji, setHighlightFirstEmoji] = useState(false);
@@ -226,7 +226,7 @@ function EmojiPickerMenu({onEmojiSelected, activeEmoji}: EmojiPickerMenuProps, r
         return () => {
             cleanupEventHandlers();
         };
-    }, [ref, shouldFocusInputOnScreenFocus, cleanupEventHandlers, setupEventHandlers]);
+    }, [ref, shouldFocusInputOnScreenFocus, cleanupEventHandlers, setupEventHandlers, isFocused]);
 
     const scrollToHeader = useCallback(
         (headerIndex: number) => {
@@ -330,11 +330,15 @@ function EmojiPickerMenu({onEmojiSelected, activeEmoji}: EmojiPickerMenuProps, r
                     ref={searchInputRef}
                     autoFocus={shouldFocusInputOnScreenFocus}
                     onFocus={() => {
+                        onMenuInputFocusChange(true);
                         setFocusedIndex(-1);
                         setIsFocused(true);
                         setIsUsingKeyboardMovement(false);
                     }}
-                    onBlur={() => setIsFocused(false)}
+                    onBlur={() => {
+                        onMenuInputFocusChange(false);
+                        setIsFocused(false);
+                    }}
                     autoCorrect={false}
                     blurOnSubmit={filteredEmojis.length > 0}
                 />

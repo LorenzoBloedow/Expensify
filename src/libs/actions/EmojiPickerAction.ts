@@ -4,6 +4,7 @@ import type {TextInput, View} from 'react-native';
 import type {ValueOf} from 'type-fest';
 import type {Emoji} from '@assets/emojis/types';
 import type {CloseContextMenuCallback} from '@components/Reactions/QuickEmojiReactions/types';
+import type {BaseTextInputRef} from '@components/TextInput/BaseTextInput/types';
 import type CONST from '@src/CONST';
 
 type AnchorOrigin = {
@@ -33,6 +34,11 @@ type EmojiPickerRef = {
     hideEmojiPicker: (isNavigating?: boolean) => void;
     isEmojiPickerVisible: boolean;
     resetEmojiPopoverAnchor: () => void;
+};
+
+type EmojiPickerMenuRef = {
+    getEmojiSearchInput: () => BaseTextInputRef | null;
+    isEmojiSearchInputFocused: boolean;
 };
 
 type OnEmojiSelected = (emojiCode: string, emojiObject: Emoji) => void;
@@ -112,4 +118,4 @@ function resetEmojiPopoverAnchor() {
 }
 
 export {emojiPickerRef, showEmojiPicker, hideEmojiPicker, isActive, clearActive, isEmojiPickerVisible, resetEmojiPopoverAnchor};
-export type {AnchorOrigin, OnModalHideValue, OnEmojiSelected, EmojiPopoverAnchor, OnWillShowPicker, EmojiPickerRef};
+export type {AnchorOrigin, OnModalHideValue, OnEmojiSelected, EmojiPopoverAnchor, OnWillShowPicker, EmojiPickerRef, EmojiPickerMenuRef};

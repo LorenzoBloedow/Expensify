@@ -7,12 +7,13 @@ import FocusTrapForModal from '@components/FocusTrap/FocusTrapForModal';
 import PopoverWithMeasuredContent from '@components/PopoverWithMeasuredContent';
 import type {BaseTextInputRef} from '@components/TextInput/BaseTextInput/types';
 import withViewportOffsetTop from '@components/withViewportOffsetTop';
+import useKeyboardState from '@hooks/useKeyboardState';
 import useResponsiveLayout from '@hooks/useResponsiveLayout';
 import useStyleUtils from '@hooks/useStyleUtils';
 import useThemeStyles from '@hooks/useThemeStyles';
 import useWindowDimensions from '@hooks/useWindowDimensions';
 import type {AnchorOrigin, EmojiPickerRef, EmojiPopoverAnchor, OnEmojiSelected, OnModalHideValue, OnWillShowPicker} from '@libs/actions/EmojiPickerAction';
-import {isMobileChrome} from '@libs/Browser';
+import {isMobileChrome, isMobileSafari} from '@libs/Browser';
 import calculateAnchorPosition from '@libs/calculateAnchorPosition';
 import {close} from '@userActions/Modal';
 import CONST from '@src/CONST';
@@ -48,6 +49,12 @@ function EmojiPicker({viewportOffsetTop}: EmojiPickerProps, ref: ForwardedRef<Em
     const emojiSearchInput = useRef<BaseTextInputRef | null>(null);
     const {windowHeight} = useWindowDimensions();
     const {shouldUseNarrowLayout} = useResponsiveLayout();
+    const [isMenuInputFocused, setIsMenuInputFocused] = useState(false);
+    const {keyboardHeight, isKeyboardActive} = useKeyboardState();
+
+    useEffect(() => {
+        setIsMenuInputFocused(isKeyboardActive);
+    }, [isKeyboardActive]);
 
     /**
      * Get the popover anchor ref
@@ -123,17 +130,14 @@ function EmojiPicker({viewportOffsetTop}: EmojiPickerProps, ref: ForwardedRef<Em
         };
         setIsEmojiPickerVisible(false);
     };
-
     /**
      * Focus the search input in the emoji picker.
-     */
-    const focusEmojiSearchInput = () => {
+     */ const focusEmojiSearchInput = () => {
         if (!emojiSearchInput.current) {
             return;
         }
         emojiSearchInput.current.focus();
     };
-
     /**
      * Callback for the emoji picker to add whatever emoji is chosen into the main input
      */
@@ -209,7 +213,11 @@ function EmojiPicker({viewportOffsetTop}: EmojiPickerProps, ref: ForwardedRef<Em
                 height: CONST.EMOJI_PICKER_SIZE.HEIGHT,
             }}
             anchorAlignment={emojiPopoverAnchorOrigin}
-            outerStyle={StyleUtils.getOuterModalStyle(windowHeight, viewportOffsetTop)}
+            outerStyle={{
+                ...StyleUtils.getOuterModalStyle(windowHeight, viewportOffsetTop),
+                position: 'fixed',
+                bottom: isMenuInputFocused && isMobileSafari() ? keyboardHeight : 0,
+            }}
             innerContainerStyle={styles.popoverInnerContainer}
             anchorDimensions={emojiAnchorDimension.current}
             avoidKeyboard
@@ -221,6 +229,7 @@ function EmojiPicker({viewportOffsetTop}: EmojiPickerProps, ref: ForwardedRef<Em
                 <View>
                     <EmojiPickerMenu
                         onEmojiSelected={selectEmoji}
+                        onMenuInputFocusChange={setIsMenuInputFocused}
                         activeEmoji={activeEmoji.current}
                         ref={(el) => (emojiSearchInput.current = el)}
                     />

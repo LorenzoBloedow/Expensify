@@ -6,10 +6,9 @@ import useKeyboardState from '@hooks/useKeyboardState';
 import useLocalize from '@hooks/useLocalize';
 import usePreferredEmojiSkinTone from '@hooks/usePreferredEmojiSkinTone';
 import useStyleUtils from '@hooks/useStyleUtils';
-import useWindowDimensions from '@hooks/useWindowDimensions';
 import * as EmojiUtils from '@libs/EmojiUtils';
 
-const useEmojiPickerMenu = () => {
+const useEmojiPickerMenu = (isEmojiPickerMenuInputFocused?: boolean) => {
     const emojiListRef = useRef<FlashList<EmojiUtils.EmojiPickerListItem>>(null);
     const frequentlyUsedEmojis = useFrequentlyUsedEmojis();
     // eslint-disable-next-line react-compiler/react-compiler, react-hooks/exhaustive-deps
@@ -22,17 +21,16 @@ const useEmojiPickerMenu = () => {
     const isListFiltered = allEmojis.length !== filteredEmojis.length;
     const {preferredLocale} = useLocalize();
     const [preferredSkinTone] = usePreferredEmojiSkinTone();
-    const {windowHeight} = useWindowDimensions();
-    const StyleUtils = useStyleUtils();
     const {keyboardHeight} = useKeyboardState();
+    const StyleUtils = useStyleUtils();
 
     /**
      * The EmojiPicker sets the `innerContainerStyle` with `maxHeight: '95%'` in `styles.popoverInnerContainer`
      * to prevent the list from being cut off when the list height exceeds the container's height.
-     * To calculate the available list height, we subtract the keyboard height from the `windowHeight`
+     * To calculate the available list height, we subtract the keyboard height from `window.innerHeight`
      * to ensure the list is properly adjusted when the keyboard is visible.
      */
-    const listStyle = StyleUtils.getEmojiPickerListHeight(isListFiltered, windowHeight * 0.95 - keyboardHeight);
+    const listStyle = StyleUtils.getEmojiPickerListHeight(!isListFiltered, window.innerHeight * 0.95 - (isEmojiPickerMenuInputFocused ? keyboardHeight : 0));
 
     useEffect(() => {
         setFilteredEmojis(allEmojis);
