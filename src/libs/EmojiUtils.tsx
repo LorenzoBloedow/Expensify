@@ -326,6 +326,35 @@ function getAddedEmojis(currentEmojis: Emoji[], formerEmojis: Emoji[]): Emoji[] 
     return newEmojis;
 }
 
+function getOriginalEmojiName(emojiName: Emoji['name']): string {
+    return `${CONST.EMOJI_NAME_SEPARATOR}${emojiName}${CONST.EMOJI_NAME_SEPARATOR}`;
+}
+
+function isEmojiInsideCodeBlock(text: string, emojiCode: Emoji['code']): boolean {
+    const normalizedText = text.replaceAll(/`{3}/g, '`');
+    if (!text || !emojiCode || normalizedText.length < 3) {
+        return false;
+    }
+
+    // If there's only one backtick or none at all.
+    if (text.indexOf('`') === text.lastIndexOf('`')) {
+        return false;
+    }
+
+    let codeBlocks = normalizedText.split('`');
+    if (codeBlocks.length <= 1) {
+        return false;
+    }
+
+    codeBlocks = codeBlocks.filter((block) => block.trim());
+
+    if (codeBlocks.length % 2 !== 0 && codeBlocks.length > 1) {
+        return false;
+    }
+
+    return codeBlocks.some((codeBlock) => codeBlock.includes(emojiCode));
+}
+
 /**
  * Replace any emoji name in a text with the emoji icon.
  * If we're on mobile, we also add a space after the emoji granted there's no text after it.
@@ -341,10 +370,7 @@ function replaceEmojis(text: string, preferredSkinTone: OnyxEntry<number | strin
 
     let newText = text;
     const emojis: Emoji[] = [];
-    const emojiData = text.match(CONST.REGEX.EMOJI_NAME);
-    if (!emojiData || emojiData.length === 0) {
-        return {text: newText, emojis};
-    }
+    const emojiData = text.match(CONST.REGEX.EMOJI_NAME) ?? [];
 
     let cursorPosition;
 
@@ -386,6 +412,58 @@ function replaceEmojis(text: string, preferredSkinTone: OnyxEntry<number | strin
             newText = newText.slice(0, cursorPosition) + space + newText.slice(cursorPosition);
         }
         cursorPosition += space.length;
+    }
+
+    const splitEmojis = splitTextWithEmojis(newText);
+    const mergedEmojis: Array<{
+        text: string;
+        completeText: string;
+        code: string;
+    }> = [];
+
+    {
+        let emoji = {
+            text: '',
+            code: '',
+            completeText: '',
+        };
+
+        while (splitEmojis.length > 0) {
+            const splitEmoji = splitEmojis.shift();
+            if (splitEmoji?.isEmoji && emoji.code) {
+                const previousEmojiSplit = splitTextWithEmojis(emoji.text).at(-1);
+
+                mergedEmojis.push(emoji);
+                emoji = {
+                    text: splitEmoji.text,
+                    code: splitEmoji.text,
+                    completeText: !previousEmojiSplit?.isEmoji ? (previousEmojiSplit?.text ?? '') + splitEmoji.text : splitEmoji.text,
+                };
+            } else {
+                emoji.code = splitEmoji?.isEmoji ? splitEmoji.text : emoji.code;
+                emoji.text += splitEmoji?.text ?? '';
+                emoji.completeText += splitEmoji?.text ?? '';
+            }
+        }
+        if (emoji.code && emoji.text && emoji.completeText) {
+            mergedEmojis.push(emoji);
+        }
+    }
+
+    if (mergedEmojis.length === 0) {
+        return {text: newText, emojis, cursorPosition};
+    }
+
+    newText = '';
+    for (const splitEmoji of mergedEmojis) {
+        if (isEmojiInsideCodeBlock(splitEmoji.completeText, splitEmoji.code)) {
+            const emojiName = getOriginalEmojiName(findEmojiByCode(splitEmoji.code).name);
+            newText += splitEmoji.text.replace(splitEmoji.code, emojiName);
+            cursorPosition = newText.indexOf(emojiName);
+        } else {
+            newText += splitEmoji.text;
+            cursorPosition = newText.indexOf(splitEmoji.text);
+        }
     }
 
     return {text: newText, emojis, cursorPosition};
