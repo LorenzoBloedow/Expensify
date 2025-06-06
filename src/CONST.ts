@@ -1890,6 +1890,7 @@ const CONST = {
     },
 
     EMOJI_SPACER: 'SPACER',
+    EMOJI_NAME_SEPARATOR: ':',
 
     // This is the number of columns in each row of the picker.
     // Because of how flatList implements these rows, each row is an index rather than each element
