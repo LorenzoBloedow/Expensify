@@ -1,3 +1,5 @@
+import type {MarkdownRange} from '@expensify/react-native-live-markdown';
+import {parseExpensiMark} from '@expensify/react-native-live-markdown';
 import {Str} from 'expensify-common';
 import lodashSortBy from 'lodash/sortBy';
 import React from 'react';
@@ -376,61 +378,37 @@ function replaceEmojis(text: string, preferredSkinTone: OnyxEntry<number | strin
         cursorPosition += space.length;
     }
 
+    // This code reverses an emoji from its unicode representation to its shortcut name.
+    let newCodeblockText = newText;
+    let isOpen = false;
+    let codeRange: MarkdownRange | null = null;
+    let cursor = 0;
+    const parsedRanges = parseExpensiMark(newText);
     // Optimization to skip emoji name reversal if not necessary.
-    if (!newText.includes('`')) {
+    if (!(parsedRanges.find((t) => t.type === 'code') && parsedRanges.find((t) => t.type === 'emoji'))) {
         return {text: newText, emojis, cursorPosition};
     }
 
-    // This code reverses an emoji from its unicode representation to
-    // its shortcut name by using a simple state machine.
-    const chars = Array.from(newText);
-    const newChars: string[] = [];
-    let isOpen = false;
-    let isOpenPrevious = false;
-    let codeBranch: string[] = [];
-    let textBranch: string[] = [];
-    for (let i = 0; i < chars.length; i++) {
-        const char = chars.at(i);
-        if (!char) {
-            break;
-        }
-        textBranch.push(char);
-
-        if (char === '`') {
-            isOpen = !isOpen;
-        }
-
-        if (isOpen) {
-            const currentEmoji = Emojis.emojiCodeTableWithSkinTones[char];
-            if (currentEmoji) {
-                codeBranch.push(...`:${currentEmoji.name}:`.split(''));
-            } else {
-                codeBranch.push(char);
+    for (const range of parsedRanges) {
+        if (range.type === 'code' || codeRange) {
+            codeRange = range.type === 'code' ? range : codeRange;
+            if (codeRange) {
+                isOpen = codeRange.start === cursor || codeRange.start + codeRange.length > cursor;
             }
         }
 
-        // Code block just closed, flush code branch.
-        if (!isOpen && isOpenPrevious) {
-            codeBranch.push(char);
-            newChars.push(...codeBranch);
-            codeBranch = [];
-            textBranch = [];
-            // Regular text with or without emojis, just flush them normally
-        } else if (!isOpen) {
-            newChars.push(...textBranch);
-            textBranch = [];
-            // If we are at the end of the text and the branch is still open,
-            // we need to flush it as regular text because the code block isn't closed.
-        } else if (isOpen && i === chars.length - 1) {
-            newChars.push(...textBranch);
+        if (isOpen && range.type === 'emoji') {
+            const emoji = newText.slice(range.start, range.start + range.length);
+            const emojiName = Emojis.emojiCodeTableWithSkinTones[emoji]?.name;
+            if (emojiName) {
+                newCodeblockText = newCodeblockText.replace(emoji, `:${emojiName}:`);
+            }
         }
 
-        if (char === '`') {
-            isOpenPrevious = !isOpenPrevious;
-        }
+        cursor = range.start + range.length - 1;
     }
 
-    return {text: newChars.join(''), emojis, cursorPosition};
+    return {text: newCodeblockText, emojis, cursorPosition};
 }
 
 /**
