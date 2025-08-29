@@ -32,7 +32,7 @@ function ReportFieldTypePicker({defaultValue, onOptionSelected}: ReportFieldType
     const {translate} = useLocalize();
 
     const typeSections = useMemo(() => {
-        const data = Object.values(CONST.REPORT_FIELD_TYPES).map((reportFieldType) => ({
+        const data = Object.values(CONST.REPORT_FIELD_INPUT_TYPES).map((reportFieldType) => ({
             keyForList: reportFieldType,
             value: reportFieldType,
             isSelected: defaultValue === reportFieldType,

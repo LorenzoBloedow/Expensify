@@ -23,6 +23,8 @@ import INPUT_IDS from '@src/types/form/WorkspaceReportFieldForm';
 import type {Policy, PolicyReportField, Report} from '@src/types/onyx';
 import type {OnyxValueWithOfflineFeedback} from '@src/types/onyx/OnyxCommon';
 import type {OnyxData} from '@src/types/onyx/Request';
+import { isReportFieldFormula } from "@userActions/Report";
+import type { PolicyReportFieldType } from "@src/types/onyx/Policy";
 
 let listValues: string[];
 let disabledListValues: boolean[];
@@ -159,6 +161,10 @@ function deleteReportFieldsListValue(valueIndexes: number[]) {
     });
 }
 
+function isReportFieldTextInput(reportFieldType: PolicyReportFieldType | undefined): boolean {
+    return reportFieldType === CONST.REPORT_FIELD_TYPES.TEXT || reportFieldType === CONST.REPORT_FIELD_TYPES.FORMULA;
+}
+
 type CreateReportFieldArguments = Pick<WorkspaceReportFieldForm, 'name' | 'type' | 'initialValue'>;
 
 /**
@@ -170,7 +176,7 @@ function createReportField(policyID: string, {name, type, initialValue}: CreateR
     const fieldKey = ReportUtils.getReportFieldKey(fieldID);
     const optimisticReportFieldDataForPolicy: Omit<OnyxValueWithOfflineFeedback<PolicyReportField>, 'value'> = {
         name,
-        type,
+        type: isReportFieldFormula(initialValue) ? CONST.REPORT_FIELD_TYPES.FORMULA : type,
         target: 'expense',
         defaultValue: initialValue,
         values: listValues,
@@ -510,4 +516,5 @@ export {
     openPolicyReportFieldsPage,
     addReportFieldListValue,
     removeReportFieldListValue,
+    isReportFieldTextInput
 };

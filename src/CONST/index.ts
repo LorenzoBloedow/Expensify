@@ -6800,7 +6800,16 @@ const CONST = {
         TEXT: 'text',
         DATE: 'date',
         LIST: 'dropdown',
+        FORMULA: 'formula'
     },
+    REPORT_FIELD_INPUT_TYPES: {
+        TEXT: 'text',
+        DATE: 'date',
+        LIST: 'dropdown',
+    },
+    REPORT_FIELD_ID_PREFIX: 'field_id_',
+    FORMULA_START_SYNTAX: '{',
+    FORMULA_END_SYNTAX: '}',
 
     NAVIGATION_ACTIONS: {
         RESET: 'RESET',
