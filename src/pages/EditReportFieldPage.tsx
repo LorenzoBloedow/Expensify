@@ -116,7 +116,7 @@ function EditReportFieldPage({route}: EditReportFieldPageProps) {
                 shouldEnableNewFocusManagement
             />
 
-            {(reportField.type === 'text' || isReportFieldTitle) && (
+            {(['text', 'formula'].includes(reportField.type) || isReportFieldTitle) && (
                 <EditReportFieldText
                     fieldName={Str.UCFirst(reportField.name)}
                     fieldKey={fieldKey}

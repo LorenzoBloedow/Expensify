@@ -21,7 +21,7 @@ import NotFoundPage from '@pages/ErrorPage/NotFoundPage';
 import AccessOrNotFoundWrapper from '@pages/workspace/AccessOrNotFoundWrapper';
 import type {WithPolicyAndFullscreenLoadingProps} from '@pages/workspace/withPolicyAndFullscreenLoading';
 import withPolicyAndFullscreenLoading from '@pages/workspace/withPolicyAndFullscreenLoading';
-import {updateReportFieldInitialValue} from '@userActions/Policy/ReportField';
+import {isReportFieldTextInput, updateReportFieldInitialValue} from '@userActions/Policy/ReportField';
 import CONST from '@src/CONST';
 import ONYXKEYS from '@src/ONYXKEYS';
 import type SCREENS from '@src/SCREENS';
@@ -66,7 +66,7 @@ function ReportFieldsInitialValuePage({
             const {initialValue: formInitialValue} = values;
             const errors: FormInputErrors<typeof ONYXKEYS.FORMS.WORKSPACE_REPORT_FIELDS_FORM> = {};
 
-            if (reportField?.type === CONST.REPORT_FIELD_TYPES.TEXT && formInitialValue.length > CONST.WORKSPACE_REPORT_FIELD_POLICY_MAX_LENGTH) {
+            if (isReportFieldTextInput(reportField?.type) && formInitialValue.length > CONST.WORKSPACE_REPORT_FIELD_POLICY_MAX_LENGTH) {
                 errors[INPUT_IDS.INITIAL_VALUE] = translate('common.error.characterLimitExceedCounter', {
                     length: formInitialValue.length,
                     limit: CONST.WORKSPACE_REPORT_FIELD_POLICY_MAX_LENGTH,
@@ -86,7 +86,7 @@ function ReportFieldsInitialValuePage({
         return <NotFoundPage />;
     }
 
-    const isTextFieldType = reportField.type === CONST.REPORT_FIELD_TYPES.TEXT;
+    const isTextFieldType = isReportFieldTextInput(reportField.type);
     const isListFieldType = reportField.type === CONST.REPORT_FIELD_TYPES.LIST;
 
     return (

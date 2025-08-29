@@ -2390,6 +2390,13 @@ function clearReportFieldKeyErrors(reportID: string | undefined, fieldKey: strin
     });
 }
 
+// TODO: Should we create a list of allowed formula parts and check against them?
+function isReportFieldFormula(defaultFieldValue: string): boolean {
+    return defaultFieldValue.startsWith(CONST.FORMULA_START_SYNTAX) &&
+    defaultFieldValue.endsWith(CONST.FORMULA_END_SYNTAX) &&
+    defaultFieldValue.split(":").length > 1;
+}
+
 function updateReportField(report: Report, reportField: PolicyReportField, previousReportField: PolicyReportField, policy: Policy, shouldFixViolations = false) {
     const reportID = report.reportID;
     const fieldKey = getReportFieldKey(reportField.fieldID);
@@ -2407,7 +2414,10 @@ function updateReportField(report: Report, reportField: PolicyReportField, previ
             key: `${ONYXKEYS.COLLECTION.REPORT}${reportID}`,
             value: {
                 fieldList: {
-                    [fieldKey]: reportField,
+                    [fieldKey]: {
+                        ...reportField,
+                        ...(isReportFieldFormula(reportField.defaultValue) ? { type: CONST.REPORT_FIELD_TYPES.FORMULA } : {})
+                    },
                 },
                 pendingFields: {
                     [fieldKey]: CONST.RED_BRICK_ROAD_PENDING_ACTION.UPDATE,
@@ -6191,4 +6201,5 @@ export {
     removeFailedReport,
     createTransactionThreadReport,
     openUnreportedExpense,
+    isReportFieldFormula
 };

@@ -1,11 +1,12 @@
 import type {OnyxEntry} from 'react-native-onyx';
 import type {ValueOf} from 'type-fest';
 import CONST from '@src/CONST';
-import type {Policy, Report, Transaction} from '@src/types/onyx';
+import type {Policy, PolicyReportField, Report, Transaction} from '@src/types/onyx';
 import {getCurrencySymbol} from './CurrencyUtils';
 import {getAllReportActions} from './ReportActionsUtils';
 import {getReportTransactions} from './ReportUtils';
 import {getCreated, isPartialTransaction} from './TransactionUtils';
+import Log from "./Log";
 
 type FormulaPart = {
     /** The original definition from the formula */
@@ -25,6 +26,7 @@ type FormulaContext = {
     report: Report;
     policy: OnyxEntry<Policy>;
     transaction?: Transaction;
+    depth?: number;
 };
 
 const FORMULA_PART_TYPES = {
@@ -208,7 +210,7 @@ function compute(formula: string, context: FormulaContext): string {
                 value = value === '' ? part.definition : value;
                 break;
             case FORMULA_PART_TYPES.FIELD:
-                value = computeFieldPart(part);
+                value = computeFieldPart(part, context);
                 break;
             case FORMULA_PART_TYPES.USER:
                 value = computeUserPart(part);
@@ -240,6 +242,11 @@ function computeReportPart(part: FormulaPart, context: FormulaContext): string {
         return part.definition;
     }
 
+    const customMemberField = part.fieldPath.at(2);
+    if (!!customMemberField && Object.keys(CONST.CUSTOM_FIELD_KEYS).includes(customMemberField)) {
+        return computeMemberFieldPart(part, context);
+    }
+
     switch (field.toLowerCase()) {
         case 'type':
             return formatType(report.type);
@@ -261,12 +268,75 @@ function computeReportPart(part: FormulaPart, context: FormulaContext): string {
     }
 }
 
+function computeMemberFieldPart(part: FormulaPart, context: FormulaContext): string {
+    const { report, policy } = context;
+
+    const customFieldFormulaKey = part.fieldPath.at(2);
+    const customFieldKey = CONST.CUSTOM_FIELD_KEYS[customFieldFormulaKey as keyof typeof CONST.CUSTOM_FIELD_KEYS];
+    // We currently only support getting the custom field from report submitter
+    const reportSubmitter = report.ownerAccountID;
+
+    const customFieldValue = policy?.employeeList?.[reportSubmitter ?? ''][customFieldKey];
+    return customFieldValue ?? part.definition;
+}
+
+function generateFieldPartFieldId(fieldName: string): string {
+    if (fieldName.toLowerCase() === CONST.REPORT_FIELD_TITLE_FIELD_ID) {
+        return "text_title";
+    }
+
+    return CONST.REPORT_FIELD_ID_PREFIX + fieldName.replaceAll(/[^A-Za-z0-9]/g, "_").toUpperCase();
+}
+
+function getFieldPartField(fieldName: string | undefined, policy: OnyxEntry<Policy>): PolicyReportField | null {
+    if (!fieldName || !policy) {
+        return null;
+    }
+
+    const fieldId = generateFieldPartFieldId(fieldName);
+    return Object.values(policy.fieldList ?? {}).find(field => field.fieldID === fieldId) ?? null;
+}
+
+function getFinalFieldPartFieldValue(computedValue: string | undefined | null, formula: FormulaPart, field?: PolicyReportField): string {
+    const defaultValueFromDefinition = formula.definition.match(/^\\{(field:.*)\\}/)?.[1];
+    return (computedValue ?? '') ||
+        (field?.type === CONST.REPORT_FIELD_TYPES.DATE ? formatDate(new Date().toString()) :
+        (field?.defaultValue ?? '')) || (defaultValueFromDefinition ?? '');
+}
+
 /**
  * Compute the value of a field formula part
  */
-function computeFieldPart(part: FormulaPart): string {
-    // Field computation will be implemented later
-    return part.definition;
+function computeFieldPart(part: FormulaPart, context: FormulaContext): string {
+    const [name, dateFormat] = part.fieldPath;
+    const { report, policy } = context;
+
+    const reportField = getFieldPartField(name, policy);
+    if (!reportField) {
+        Log.info(`[Formula] Report field ${name} used in formula not found in report with ID ${report.reportID}`);
+        return getFinalFieldPartFieldValue(null, part);
+    }
+
+    let result: string | undefined = (reportField.value ?? '') || reportField.defaultValue;
+    if (reportField.type === CONST.REPORT_FIELD_TYPES.DATE) {
+        result = formatDate(name, dateFormat);
+    }
+
+    if (reportField.type === CONST.REPORT_FIELD_TYPES.FORMULA) {
+        const depth = context.depth ?? 0;
+        const maxDepth = 20;
+        if (depth > maxDepth) {
+            Log.info(`[Formula] Maximum recursive formula depth of ${maxDepth} reached for report field with ID ${reportField.fieldID}`);
+            return getFinalFieldPartFieldValue(result, part, reportField);
+        }
+
+        result = compute(result, {
+            ...context,
+            depth: (depth ?? 0) + 1
+        });
+    }
+
+    return getFinalFieldPartFieldValue(result, part, reportField);
 }
 
 /**

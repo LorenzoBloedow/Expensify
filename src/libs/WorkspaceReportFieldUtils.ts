@@ -7,13 +7,17 @@ import type {PolicyReportField, PolicyReportFieldType} from '@src/types/onyx/Pol
 import {addErrorMessage} from './ErrorUtils';
 import {translateLocal} from './Localize';
 import {isRequiredFulfilled} from './ValidationUtils';
+import { isReportFieldTextInput } from "./actions/Policy/ReportField";
 
 /**
  * Gets the translation key for the report field type.
  */
 function getReportFieldTypeTranslationKey(reportFieldType: PolicyReportFieldType): TranslationPaths {
+    if (isReportFieldTextInput(reportFieldType)) {
+        return 'workspace.reportFields.textType';
+    }
+
     const typeTranslationKeysStrategy: Record<string, TranslationPaths> = {
-        [CONST.REPORT_FIELD_TYPES.TEXT]: 'workspace.reportFields.textType',
         [CONST.REPORT_FIELD_TYPES.DATE]: 'workspace.reportFields.dateType',
         [CONST.REPORT_FIELD_TYPES.LIST]: 'workspace.reportFields.dropdownType',
     };
@@ -25,8 +29,11 @@ function getReportFieldTypeTranslationKey(reportFieldType: PolicyReportFieldType
  * Gets the translation key for the alternative text for the report field.
  */
 function getReportFieldAlternativeTextTranslationKey(reportFieldType: PolicyReportFieldType): TranslationPaths {
+    if (isReportFieldTextInput(reportFieldType)) {
+        return 'workspace.reportFields.textAlternateText';
+    }
+
     const typeTranslationKeysStrategy: Record<string, TranslationPaths> = {
-        [CONST.REPORT_FIELD_TYPES.TEXT]: 'workspace.reportFields.textAlternateText',
         [CONST.REPORT_FIELD_TYPES.DATE]: 'workspace.reportFields.dateAlternateText',
         [CONST.REPORT_FIELD_TYPES.LIST]: 'workspace.reportFields.dropdownAlternateText',
     };
