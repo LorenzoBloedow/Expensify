@@ -2391,10 +2391,8 @@ function clearReportFieldKeyErrors(reportID: string | undefined, fieldKey: strin
 }
 
 // TODO: Should we create a list of allowed formula parts and check against them?
-function isReportFieldFormula(defaultFieldValue: string): boolean {
-    return defaultFieldValue.startsWith(CONST.FORMULA_START_SYNTAX) &&
-    defaultFieldValue.endsWith(CONST.FORMULA_END_SYNTAX) &&
-    defaultFieldValue.split(":").length > 1;
+function isReportFieldFormula(field: string): boolean {
+    return /.*\{.*\}.*/.test(field);
 }
 
 function updateReportField(report: Report, reportField: PolicyReportField, previousReportField: PolicyReportField, policy: Policy, shouldFixViolations = false) {
